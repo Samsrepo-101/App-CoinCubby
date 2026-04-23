@@ -28,6 +28,7 @@
             android:textStyle="bold" />
     </RelativeLayout>
 
+    <!-- Avatar + Name + Contact section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -42,22 +43,25 @@
             app:shapeAppearanceOverlay="@style/RoundedImageView" />
 
         <TextView
+            android:id="@+id/tvProfileFullName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Angelo MAlaluan"
+            android:text="Loading…"
             android:textColor="@color/black"
             android:textSize="22sp"
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tvProfileContact"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="+63 912 345 6789"
+            android:text=""
             android:textColor="@color/gray_text"
             android:textSize="14sp" />
     </LinearLayout>
 
+    <!-- Private Key card -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -81,13 +85,14 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvPrivateKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/status_active_bg"
                 android:gravity="center"
                 android:padding="20dp"
-                android:text="COIN-2026-KUPL7"
+                android:text="—"
                 android:textColor="@color/black"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -102,6 +107,7 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Change Private Key row -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -139,7 +145,9 @@
         </RelativeLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Sign Out button -->
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSignOut"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_margin="16dp"
