@@ -1,24 +1,26 @@
 package com.example.costumer_coincubby;
 
 public class Locker {
-    public enum Status {
-        AVAILABLE, PAYMENT_REQUIRED, OCCUPIED, MAINTENANCE
-    }
 
-    private String id;
-    private String size;
-    private Status status;
-    private double rate;
+    public enum Status { AVAILABLE, PAYMENT_REQUIRED, OCCUPIED, MAINTENANCE }
+
+    private final String id;
+    private final String size;
+    private final Status status;
+    private final double rate;
+    private int dbId; // ← real primary key from lockers table
 
     public Locker(String id, String size, Status status, double rate) {
-        this.id = id;
-        this.size = size;
+        this.id     = id;
+        this.size   = size;
         this.status = status;
-        this.rate = rate;
+        this.rate   = rate;
     }
 
-    public String getId() { return id; }
-    public String getSize() { return size; }
+    public String getId()     { return id; }
+    public String getSize()   { return size; }
     public Status getStatus() { return status; }
-    public double getRate() { return rate; }
+    public double getRate()   { return rate; }
+    public int    getDbId()   { return dbId; }
+    public void   setDbId(int dbId) { this.dbId = dbId; }
 }

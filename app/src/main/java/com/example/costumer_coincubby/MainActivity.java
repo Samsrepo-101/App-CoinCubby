@@ -32,19 +32,17 @@ public class MainActivity extends AppCompatActivity {
         navHistory.setOnClickListener(v -> selectTab(2));
         navProfile.setOnClickListener(v -> selectTab(3));
 
-        // Start with Home
         selectTab(0);
     }
 
     public void selectTab(int index) {
         Fragment fragment = null;
-        
-        // Reset all tabs
+
         navHome.setBackgroundResource(0);
         navRent.setBackgroundResource(0);
         navHistory.setBackgroundResource(0);
         navProfile.setBackgroundResource(0);
-        
+
         navHomeText.setVisibility(View.GONE);
         navRentText.setVisibility(View.GONE);
         navHistoryText.setVisibility(View.GONE);
@@ -80,18 +78,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void showMyRentalWithDetails(String lockerId, String size, boolean isOpenTime, String duration) {
-        MyRentalFragment fragment = MyRentalFragment.newInstance(lockerId, size, isOpenTime, duration);
+    // ── Updated: accepts rate so MyRentalFragment shows correct billing ───────
+    public void showMyRentalWithDetails(String lockerId, String size,
+                                        boolean isOpenTime, String duration,
+                                        double rate) {
+        MyRentalFragment fragment = MyRentalFragment.newInstance(
+                lockerId, size, isOpenTime, duration, rate);
+
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
-        
-        // Update Bottom Nav UI manually to reflect "Rent" tab selection
+
         navHome.setBackgroundResource(0);
         navRent.setBackgroundResource(R.drawable.nav_item_selected_bg);
         navHistory.setBackgroundResource(0);
         navProfile.setBackgroundResource(0);
-        
+
         navHomeText.setVisibility(View.GONE);
         navRentText.setVisibility(View.VISIBLE);
         navHistoryText.setVisibility(View.GONE);
