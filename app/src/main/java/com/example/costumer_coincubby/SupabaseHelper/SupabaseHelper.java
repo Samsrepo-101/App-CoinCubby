@@ -179,4 +179,12 @@ public class SupabaseHelper {
         String json = "{\"status\":\"" + status + "\"}";
         patch("/transactions?transaction_id=eq." + transactionId, json, cb);
     }
+    public static void fetchRentalHistory(String customerId, Callback cb) {
+        get("/transactions?select=transaction_id,start_time,end_time,duration_minutes,"
+                + "status,qr_token,"
+                + "lockers(locker_number,size_type_id),"
+                + "payments(amount,payment_method)"
+                + "&customer_id=eq." + customerId
+                + "&order=start_time.desc", cb);
+    }
 }

@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.costumer_coincubby.SupabaseHelper.SupabaseHelper;
+import com.example.costumer_coincubby.shared.SessionManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import org.json.JSONArray;
@@ -33,11 +34,7 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
     private static final String ARG_SIZE         = "locker_size";
     private static final String ARG_RATE         = "locker_rate";
     private static final String ARG_DB_LOCKER_ID = "db_locker_id";
-
-    private static final String CUSTOMER_ID    = "00000000-0000-0000-0000-000000000001";
-    private static final String CUSTOMER_NAME  = "Demo User";
-    private static final String CUSTOMER_EMAIL = "demo@coincubby.app";
-
+    private boolean isWalletSelected = true;
     private boolean isOpenTime = false;
     private double  ratePerHr;
 
@@ -86,17 +83,47 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
         ratePerHr      = getArguments().getDouble(ARG_RATE);
         int dbLockerId = getArguments().getInt(ARG_DB_LOCKER_ID, fallbackDbId(id));
 
-        TextView   title          = view.findViewById(R.id.rent_title);
-        TextView   subtitle       = view.findViewById(R.id.rent_subtitle);
-        EditText   etDuration     = view.findViewById(R.id.et_duration);
-        TextView   tvTotal        = view.findViewById(R.id.tv_total);
-        RadioGroup rgRentalType   = view.findViewById(R.id.rg_rental_type);
-        RadioGroup rgPayment      = view.findViewById(R.id.rg_payment);
+        TextView   title           = view.findViewById(R.id.rent_title);
+        TextView   subtitle        = view.findViewById(R.id.rent_subtitle);
+        EditText   etDuration      = view.findViewById(R.id.et_duration);
+        TextView   tvTotal         = view.findViewById(R.id.tv_total);
+        RadioGroup rgRentalType    = view.findViewById(R.id.rg_rental_type);
+        RadioGroup rgPayment       = view.findViewById(R.id.rg_payment);
         View       llDurationInput = view.findViewById(R.id.ll_duration_input);
-        View       cardWallet     = view.findViewById(R.id.card_wallet);
+        View       cardWallet      = view.findViewById(R.id.card_wallet);
 
         title.setText("Rent Locker " + id);
         subtitle.setText("Size: " + size + "  Rate: ₱" + (int) ratePerHr + "/hr");
+
+        android.widget.RadioButton rbWallet = view.findViewById(R.id.rb_wallet);
+        android.widget.RadioButton rbDevice = view.findViewById(R.id.rb_device);
+
+        rbWallet.setOnClickListener(v -> {
+            rbWallet.setChecked(true);
+            rbDevice.setChecked(false);
+            isWalletSelected = true;
+        });
+
+        rbDevice.setOnClickListener(v -> {
+            rbDevice.setChecked(true);
+            rbWallet.setChecked(false);
+            isWalletSelected = false;
+        });
+
+        view.findViewById(R.id.card_wallet).setOnClickListener(v -> {
+            rbWallet.setChecked(true);
+            rbDevice.setChecked(false);
+            isWalletSelected = true;
+        });
+
+        rbWallet.setChecked(true);
+        rbDevice.setChecked(false);
+
+        view.findViewById(R.id.card_device).setOnClickListener(v -> {
+            rbDevice.setChecked(true);
+            rbWallet.setChecked(false);
+            isWalletSelected = false;
+        });
 
         // ── Rental type toggle ────────────────────────────────────────────────
         rgRentalType.setOnCheckedChangeListener((group, checkedId) -> {
@@ -110,6 +137,8 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
                 isOpenTime = false;
                 llDurationInput.setVisibility(View.VISIBLE);
                 cardWallet.setVisibility(View.VISIBLE);
+                rgPayment.check(R.id.rb_wallet);
+                isWalletSelected = true;
                 updateTotal(etDuration.getText().toString(), tvTotal);
             }
         });
@@ -165,15 +194,21 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
     // Step 1 ──────────────────────────────────────────────────────────────────
     private void startRentalFlow(String lockerId, String size,
                                  String duration, int dbLockerId) {
+        String customerId = getCustomerId();
+        if (customerId == null || customerId.isEmpty()) {
+            showError("You must be logged in to rent a locker.");
+            resetConfirmButton();
+            return;
+        }
+
         SupabaseHelper.upsertCustomer(
-                CUSTOMER_ID, CUSTOMER_NAME, CUSTOMER_EMAIL,
+                customerId, getCustomerName(), getCustomerEmail(),
                 new SupabaseHelper.Callback() {
                     @Override public void onSuccess(String body) {
                         fetchRateAndContinue(lockerId, size, duration, dbLockerId);
                     }
                     @Override public void onError(String error) {
                         Log.w(TAG, "Customer upsert warning (continuing): " + error);
-                        // Non-fatal — customer may already exist; keep going
                         fetchRateAndContinue(lockerId, size, duration, dbLockerId);
                     }
                 });
@@ -185,9 +220,8 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
         SupabaseHelper.fetchRates(new SupabaseHelper.Callback() {
             @Override
             public void onSuccess(String body) {
-                Log.d(TAG, "Raw rates response: '" + body + "'");  // ← add this
+                Log.d(TAG, "Raw rates response: '" + body + "'");
 
-                // If body is empty array "[]" then rates table is empty
                 if (body.trim().equals("[]")) {
                     showError("Rates table is empty. Please contact support.");
                     resetConfirmButton();
@@ -214,21 +248,21 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
             }
         });
     }
+
     // Step 3 ──────────────────────────────────────────────────────────────────
     private void insertTransaction(String lockerId, String size,
                                    String duration, int dbLockerId,
                                    int rateId, double amount) {
-        String qrToken   = UUID.randomUUID().toString()
+        String customerId = getCustomerId();
+        String qrToken    = UUID.randomUUID().toString()
                 .replace("-", "")
                 .substring(0, 10)
                 .toUpperCase();
-        String startTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss",
+        String startTime  = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss",
                 Locale.getDefault()).format(new Date());
 
-        // Build transaction JSON
-        // transaction_id is intentionally omitted — DB generates it via uuid_generate_v4()
         StringBuilder json = new StringBuilder("{");
-        json.append("\"customer_id\":\"").append(CUSTOMER_ID).append("\",");
+        json.append("\"customer_id\":\"").append(customerId).append("\",");
         json.append("\"rate_id\":").append(rateId).append(",");
         json.append("\"locker_id\":").append(dbLockerId).append(",");
         json.append("\"start_time\":\"").append(startTime).append("\",");
@@ -254,12 +288,11 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
             @Override
             public void onSuccess(String body) {
                 Log.d(TAG, "Transaction saved. Response: " + body);
-                // Extract the generated transaction_id for the payment record
                 String transactionId = extractTransactionId(body);
                 if (transactionId != null) {
                     insertPayment(transactionId, amount, duration);
                 } else {
-                    Log.w(TAG, "Could not extract transaction_id — skipping payment record");
+                    Log.w(TAG, "Could not extract transaction_id — skipping payment");
                     updateLockerStatus(dbLockerId, lockerId, size, duration);
                 }
             }
@@ -274,11 +307,7 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
 
     // Step 4 ──────────────────────────────────────────────────────────────────
     private void insertPayment(String transactionId, double amount, String duration) {
-        // Determine payment method — null if Pay at Device (handled physically)
-        boolean isWallet = !isOpenTime
-                && getView() != null
-                && ((RadioGroup) getView().findViewById(R.id.rg_payment))
-                .getCheckedRadioButtonId() == R.id.rb_wallet;
+        boolean isWallet = !isOpenTime && isWalletSelected;
 
         StringBuilder json = new StringBuilder("{");
         json.append("\"transaction_id\":\"").append(transactionId).append("\",");
@@ -286,7 +315,6 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
         if (isWallet) {
             json.append(",\"payment_method\":\"Wallet\"");
         }
-        // payment_method is intentionally omitted (null) for Pay at Device
         json.append("}");
 
         Log.d(TAG, "Inserting payment: " + json);
@@ -316,6 +344,7 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
                 : "1");
         updateLockerStatus(dbLockerId, lockerId, size, duration);
     }
+
     // Step 5 ──────────────────────────────────────────────────────────────────
     private void updateLockerStatus(int dbLockerId, String lockerId,
                                     String size, String duration) {
@@ -346,10 +375,6 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
     // Helpers
     // ═════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Match rate row by size_type_id:
-     *   1 = Small, 2 = Medium, 3 = Large
-     */
     private int parseRateId(String json, String size) {
         int target = sizeTypeIdForSize(size);
         Log.d(TAG, "Matching size='" + size + "' → size_type_id=" + target);
@@ -371,26 +396,20 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
     private int sizeTypeIdForSize(String size) {
         if (size == null) return 1;
         String s = size.trim().toLowerCase(Locale.getDefault());
-        // Handles: "Small S", "Small", "small", "Medium M", "Medium", "Large L", "Large"
         if (s.contains("medium")) return 2;
         if (s.contains("large"))  return 3;
         return 1; // Small is default
     }
 
-    /** Calculate total amount for the payment record */
     private double calculateAmount(String duration) {
-        if (isOpenTime) return 0.0; // billed at device on return
+        if (isOpenTime) return 0.0;
         try {
             return Integer.parseInt(duration) * ratePerHr;
         } catch (NumberFormatException e) {
-            return ratePerHr; // fallback to 1 hr
+            return ratePerHr;
         }
     }
 
-    /**
-     * The insertTransaction call uses return=representation so Supabase
-     * returns the created row as a JSON array. Extract transaction_id from it.
-     */
     private String extractTransactionId(String body) {
         try {
             JSONArray arr = new JSONArray(body);
@@ -430,5 +449,16 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
     @Override
     public int getTheme() {
         return R.style.CustomBottomSheetDialog;
+    }
+    private String getCustomerId() {
+        return SessionManager.getUserId(requireContext());
+    }
+    private String getCustomerName() {
+        String n = SessionManager.getFullName(requireContext());
+        return n != null ? n : "User";
+    }
+    private String getCustomerEmail() {
+        String e = SessionManager.getEmail(requireContext());
+        return e != null ? e : "";
     }
 }

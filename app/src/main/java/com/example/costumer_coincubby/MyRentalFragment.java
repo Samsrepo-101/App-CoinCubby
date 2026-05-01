@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.costumer_coincubby.SupabaseHelper.SupabaseHelper;
+import com.example.costumer_coincubby.shared.SessionManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -32,7 +33,7 @@ import java.util.TimeZone;
 public class MyRentalFragment extends Fragment {
 
     private static final String TAG         = "MyRental";
-    private static final String CUSTOMER_ID = "00000000-0000-0000-0000-000000000001";
+
 
     private RentalAdapter adapter;
     private final List<RentalItem> rentals = new ArrayList<>();
@@ -77,11 +78,19 @@ public class MyRentalFragment extends Fragment {
 
     // ── Fetch active rentals ──────────────────────────────────────────────────
     private void loadRentals() {
-        if (getView() == null) return;
+        if (getView() == null || getContext() == null) return;
+
+        String customerId = SessionManager.getUserId(requireContext());
+        if (customerId == null || customerId.isEmpty()) {
+            hideLoading();
+            getView().findViewById(R.id.layout_empty).setVisibility(View.VISIBLE);
+            return;
+        }
+
         getView().findViewById(R.id.layout_loading).setVisibility(View.VISIBLE);
         getView().findViewById(R.id.layout_empty).setVisibility(View.GONE);
 
-        SupabaseHelper.fetchActiveRentals(CUSTOMER_ID, new SupabaseHelper.Callback() {
+        SupabaseHelper.fetchActiveRentals(customerId, new SupabaseHelper.Callback() {
             @Override
             public void onSuccess(String body) {
                 if (getActivity() != null)

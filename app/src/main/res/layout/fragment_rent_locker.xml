@@ -70,7 +70,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Fixed Duration"
-                android:checked="true" />
+                android:checked
+                    ="true" />
             <RadioButton
                 android:id="@+id/rb_open"
                 android:layout_width="0dp"
@@ -130,7 +131,7 @@
                     android:id="@+id/rb_wallet"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:checked="true"
+                    android:checked="false"
                     android:padding="12dp"
                     android:text="Wallet (₱10.00)" />
             </com.google.android.material.card.MaterialCardView>
@@ -148,6 +149,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="12dp"
+                    android:checked="false"
                     android:text="Pay at Device" />
             </com.google.android.material.card.MaterialCardView>
         </RadioGroup>
