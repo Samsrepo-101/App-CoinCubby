@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -177,6 +178,13 @@ public class SupabaseHelper {
 
     public static void updateTransactionStatus(String transactionId, String status, Callback cb) {
         String json = "{\"status\":\"" + status + "\"}";
+        patch("/transactions?transaction_id=eq." + transactionId, json, cb);
+    }
+
+    public static void completeTransaction(String transactionId, String endTime, int durationMinutes, Callback cb) {
+        String json = String.format(Locale.US,
+                "{\"status\":\"Completed\",\"end_time\":\"%s\",\"duration_minutes\":%d}",
+                endTime, durationMinutes);
         patch("/transactions?transaction_id=eq." + transactionId, json, cb);
     }
     public static void fetchRentalHistory(String customerId, Callback cb) {

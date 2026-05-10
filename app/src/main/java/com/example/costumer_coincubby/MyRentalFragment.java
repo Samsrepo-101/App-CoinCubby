@@ -178,29 +178,73 @@ public class MyRentalFragment extends Fragment {
 
     // ── Return locker ─────────────────────────────────────────────────────────
     private void returnLocker(RentalItem item) {
-        SupabaseHelper.updateTransactionStatus(
-                item.transactionId, "Completed",
+        if (item.isOpenTime) {
+            // Open Time: Calculate final duration and amount
+            long nowMs = System.currentTimeMillis();
+            long durationMs = nowMs - item.startMs;
+            int durationMinutes = (int) (durationMs / 60000);
+            if (durationMinutes < 60) durationMinutes = 60; // Min 1 hour charge
+
+            String endTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss",
+                    Locale.getDefault()).format(new Date(nowMs));
+
+            double finalAmount = (durationMinutes / 60.0) * item.ratePerHr;
+
+            SupabaseHelper.completeTransaction(item.transactionId, endTime, durationMinutes,
+                    new SupabaseHelper.Callback() {
+                        @Override public void onSuccess(String body) {
+                            // Insert final payment for Open Time
+                            insertFinalPayment(item.transactionId, finalAmount, item);
+                        }
+                        @Override public void onError(String error) {
+                            Log.e(TAG, "completeTransaction error: " + error);
+                            Toast.makeText(getContext(), "Could not return locker.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        } else {
+            // Fixed Duration: Just update status
+            SupabaseHelper.updateTransactionStatus(
+                    item.transactionId, "Completed",
+                    new SupabaseHelper.Callback() {
+                        @Override public void onSuccess(String body) {
+                            finalizeLockerReturn(item);
+                        }
+                        @Override public void onError(String error) {
+                            Log.e(TAG, "updateTransactionStatus error: " + error);
+                            Toast.makeText(getContext(), "Could not return locker.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }
+    }
+
+    private void insertFinalPayment(String transactionId, double amount, RentalItem item) {
+        String json = String.format(Locale.US,
+                "{\"transaction_id\":\"%s\",\"amount\":%.2f,\"payment_method\":\"Device\"}",
+                transactionId, amount);
+
+        SupabaseHelper.insertPayment(json, new SupabaseHelper.Callback() {
+            @Override public void onSuccess(String body) {
+                finalizeLockerReturn(item);
+            }
+            @Override public void onError(String error) {
+                Log.w(TAG, "Final payment insert warning: " + error);
+                finalizeLockerReturn(item);
+            }
+        });
+    }
+
+    private void finalizeLockerReturn(RentalItem item) {
+        SupabaseHelper.updateLockerStatus(
+                item.lockerId, "Available",
                 new SupabaseHelper.Callback() {
-                    @Override public void onSuccess(String body) {
-                        SupabaseHelper.updateLockerStatus(
-                                item.lockerId, "Available",
-                                new SupabaseHelper.Callback() {
-                                    @Override public void onSuccess(String b) {
-                                        Toast.makeText(getContext(),
-                                                "Locker " + item.lockerNumber
-                                                        + " returned!", Toast.LENGTH_SHORT).show();
-                                        loadRentals();
-                                    }
-                                    @Override public void onError(String e) {
-                                        Log.e(TAG, "updateLockerStatus error: " + e);
-                                        loadRentals();
-                                    }
-                                });
-                    }
-                    @Override public void onError(String error) {
-                        Log.e(TAG, "updateTransactionStatus error: " + error);
+                    @Override public void onSuccess(String b) {
                         Toast.makeText(getContext(),
-                                "Could not return locker.", Toast.LENGTH_SHORT).show();
+                                "Locker " + item.lockerNumber + " returned!", Toast.LENGTH_SHORT).show();
+                        loadRentals();
+                    }
+                    @Override public void onError(String e) {
+                        Log.e(TAG, "updateLockerStatus error: " + e);
+                        loadRentals();
                     }
                 });
     }

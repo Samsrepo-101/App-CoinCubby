@@ -127,18 +127,21 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
 
         // ── Rental type toggle ────────────────────────────────────────────────
         rgRentalType.setOnCheckedChangeListener((group, checkedId) -> {
+            com.google.android.material.button.MaterialButton btnConfirm = view.findViewById(R.id.btn_confirm);
             if (checkedId == R.id.rb_open) {
                 isOpenTime = true;
                 llDurationInput.setVisibility(View.GONE);
                 rgPayment.check(R.id.rb_device);
                 cardWallet.setVisibility(View.GONE);
                 tvTotal.setText("Running...");
+                btnConfirm.setText("Start Rental");
             } else {
                 isOpenTime = false;
                 llDurationInput.setVisibility(View.VISIBLE);
                 cardWallet.setVisibility(View.VISIBLE);
                 rgPayment.check(R.id.rb_wallet);
                 isWalletSelected = true;
+                btnConfirm.setText("Confirm Rental");
                 updateTotal(etDuration.getText().toString(), tvTotal);
             }
         });
@@ -311,7 +314,7 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
 
         StringBuilder json = new StringBuilder("{");
         json.append("\"transaction_id\":\"").append(transactionId).append("\",");
-        json.append("\"amount\":").append(String.format(Locale.getDefault(), "%.2f", amount));
+        json.append("\"amount\":").append(String.format(Locale.US, "%.2f", amount));
         if (isWallet) {
             json.append(",\"payment_method\":\"Wallet\"");
         }

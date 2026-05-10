@@ -124,23 +124,29 @@ public class HistoryFragment extends Fragment {
                     default: sizeName = "Small";  break;
                 }
 
-                // Payment info — payments is an array (one transaction can have one payment)
+                // Payment info — sum all payments for this transaction
                 double amount = 0;
                 String paymentMethod = null;
                 JSONArray paymentsArr = tx.optJSONArray("payments");
-                if (paymentsArr != null && paymentsArr.length() > 0) {
-                    JSONObject p = paymentsArr.getJSONObject(0);
-                    amount        = p.optDouble("amount", 0);
-                    paymentMethod = p.optString("payment_method", null);
+                if (paymentsArr != null) {
+                    for (int j = 0; j < paymentsArr.length(); j++) {
+                        JSONObject p = paymentsArr.getJSONObject(j);
+                        amount += p.optDouble("amount", 0);
+                        if (paymentMethod == null) {
+                            paymentMethod = p.optString("payment_method", null);
+                        }
+                    }
                 }
 
                 totalSpent += amount;
                 if ("Completed".equals(status)) completedCnt++;
 
+                int durationMinutes = tx.optInt("duration_minutes", 0);
+
                 items.add(new HistoryItem(
                         lockerNum, sizeName, qrToken,
                         amount, paymentMethod,
-                        status, startTime));
+                        status, startTime, durationMinutes));
             }
         } catch (Exception e) {
             Log.e(TAG, "parse error: " + e.getMessage());
@@ -179,17 +185,19 @@ public class HistoryFragment extends Fragment {
         public final String paymentMethod; // null = Pay at Device
         public final String status;
         public final String startTimeRaw;
+        public final int    durationMinutes;
 
         public HistoryItem(String lockerNumber, String sizeName, String qrToken,
                            double amount, String paymentMethod,
-                           String status, String startTimeRaw) {
-            this.lockerNumber  = lockerNumber;
-            this.sizeName      = sizeName;
-            this.qrToken       = qrToken;
-            this.amount        = amount;
-            this.paymentMethod = paymentMethod;
-            this.status        = status;
-            this.startTimeRaw  = startTimeRaw;
+                           String status, String startTimeRaw, int durationMinutes) {
+            this.lockerNumber    = lockerNumber;
+            this.sizeName        = sizeName;
+            this.qrToken         = qrToken;
+            this.amount          = amount;
+            this.paymentMethod   = paymentMethod;
+            this.status          = status;
+            this.startTimeRaw    = startTimeRaw;
+            this.durationMinutes = durationMinutes;
         }
     }
 
@@ -236,10 +244,12 @@ public class HistoryFragment extends Fragment {
                 tvQrToken.setText(item.qrToken);
                 tvSize.setText(item.sizeName);
 
-                // Amount — show ₱0.00 for open-time pay-at-device
+                // Amount — sum of all payments
                 if (item.amount > 0) {
+                    String durationStr = item.durationMinutes > 0
+                            ? " (" + formatMinutes(item.durationMinutes) + ")" : "";
                     tvAmount.setText(String.format(Locale.getDefault(),
-                            "₱%.2f", item.amount));
+                            "₱%.2f", item.amount) + durationStr);
                 } else {
                     tvAmount.setText("—");
                 }
@@ -290,6 +300,14 @@ public class HistoryFragment extends Fragment {
                     } catch (ParseException ignored) {}
                 }
                 return raw;
+            }
+
+            private String formatMinutes(int totalMin) {
+                if (totalMin < 60) return totalMin + "m";
+                int hrs = totalMin / 60;
+                int min = totalMin % 60;
+                if (min == 0) return hrs + "h";
+                return hrs + "h " + min + "m";
             }
         }
     }
