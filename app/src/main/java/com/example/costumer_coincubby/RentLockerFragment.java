@@ -257,10 +257,11 @@ public class RentLockerFragment extends BottomSheetDialogFragment {
                                    String duration, int dbLockerId,
                                    int rateId, double amount) {
         String customerId = getCustomerId();
-        String qrToken    = UUID.randomUUID().toString()
-                .replace("-", "")
-                .substring(0, 10)
-                .toUpperCase();
+        String qrToken    = SessionManager.getLockerToken(requireContext());
+        if (qrToken == null || qrToken.isEmpty()) {
+            // Fallback just in case
+            qrToken = "COIN-" + customerId.substring(0, Math.min(8, customerId.length())).toUpperCase();
+        }
         String startTime  = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss",
                 Locale.getDefault()).format(new Date());
 

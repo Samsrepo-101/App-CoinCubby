@@ -93,8 +93,9 @@ public class ProfileFragment extends Fragment {
         tvFullName.setText((fullName != null && !fullName.isEmpty()) ? fullName : "Loading…");
         tvContact.setText((email    != null && !email.isEmpty())    ? email    : "");
 
-        if (userId != null && userId.length() >= 8) {
-            tvPrivateKey.setText("COIN-" + userId.substring(0, 8).toUpperCase());
+        String lockerToken = SessionManager.getLockerToken(requireContext());
+        if (lockerToken != null && !lockerToken.isEmpty()) {
+            tvPrivateKey.setText(lockerToken);
         } else {
             tvPrivateKey.setText("—");
         }
@@ -148,7 +149,6 @@ public class ProfileFragment extends Fragment {
 
                     Log.d(TAG, "Auth user — id: " + userId + ", name: " + fullName);
 
-                    final String fUserId   = userId;
                     final String fEmail    = email;
                     final String fFullName = fullName;
 
@@ -160,8 +160,9 @@ public class ProfileFragment extends Fragment {
                         if (!fFullName.isEmpty()) tvFullName.setText(fFullName);
                         if (!fEmail.isEmpty())    tvContact.setText(fEmail);
                         // Update private key badge in the card
-                        if (fUserId.length() >= 8) {
-                            tvPrivateKey.setText("COIN-" + fUserId.substring(0, 8).toUpperCase());
+                        String lockerToken = SessionManager.getLockerToken(requireContext());
+                        if (lockerToken != null && !lockerToken.isEmpty()) {
+                            tvPrivateKey.setText(lockerToken);
                         }
                     });
 
@@ -222,19 +223,12 @@ public class ProfileFragment extends Fragment {
                     String fullName      = customer.optString("full_name",      "");
                     String email         = customer.optString("email",          "");
                     String contactNumber = customer.optString("contact_number", "");
-                    String customerId    = customer.optString("customer_id",    userId);
-
-                    // Private key format matches the card badge in the layout
-                    String privateKey = customerId.length() >= 8
-                            ? "COIN-" + customerId.substring(0, 8).toUpperCase()
-                            : "COIN-" + customerId.toUpperCase();
 
                     // Prefer contact number; fall back to email (shown below the name)
                     String displayContact = !contactNumber.isEmpty() ? contactNumber : email;
 
                     final String fName    = fullName;
                     final String fContact = displayContact;
-                    final String fKey     = privateKey;
 
                     if (!isAdded()) return;
 
@@ -245,7 +239,10 @@ public class ProfileFragment extends Fragment {
                         // tvProfileContact — contact/email below name
                         if (!fContact.isEmpty()) tvContact.setText(fContact);
                         // tvPrivateKey — badge inside the "Your Private Key" card
-                        tvPrivateKey.setText(fKey);
+                        String lockerToken = SessionManager.getLockerToken(requireContext());
+                        if (lockerToken != null && !lockerToken.isEmpty()) {
+                            tvPrivateKey.setText(lockerToken);
+                        }
                     });
 
                 } catch (JSONException e) {

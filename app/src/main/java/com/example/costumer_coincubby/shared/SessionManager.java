@@ -19,6 +19,7 @@ public class SessionManager {
     private static final String KEY_USER_ID   = "user_id";
     private static final String KEY_FULL_NAME = "full_name";
     private static final String KEY_EMAIL     = "email";
+    private static final String KEY_LOCKER_TOKEN = "locker_access_token";
 
     private static SharedPreferences prefs(Context ctx) {
         return ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
@@ -32,11 +33,18 @@ public class SessionManager {
 
     public static void saveSession(Context ctx, String token, String userId,
                                    String fullName, String email) {
+        String lockerToken = "";
+        if (userId != null && userId.length() >= 8) {
+            lockerToken = "COIN-" + userId.substring(0, 8).toUpperCase();
+        } else if (userId != null) {
+            lockerToken = "COIN-" + userId.toUpperCase();
+        }
         prefs(ctx).edit()
                 .putString(KEY_TOKEN,     token)
                 .putString(KEY_USER_ID,   userId)
                 .putString(KEY_FULL_NAME, fullName)
                 .putString(KEY_EMAIL,     email)
+                .putString(KEY_LOCKER_TOKEN, lockerToken)
                 .apply();
     }
 
@@ -56,6 +64,21 @@ public class SessionManager {
 
     public static String getEmail(Context ctx) {
         return prefs(ctx).getString(KEY_EMAIL, null);
+    }
+
+    public static String getLockerToken(Context ctx) {
+        String token = prefs(ctx).getString(KEY_LOCKER_TOKEN, null);
+        if (token == null || token.isEmpty()) {
+            String userId = getUserId(ctx);
+            if (userId != null && userId.length() >= 8) {
+                token = "COIN-" + userId.substring(0, 8).toUpperCase();
+                prefs(ctx).edit().putString(KEY_LOCKER_TOKEN, token).apply();
+            } else if (userId != null) {
+                token = "COIN-" + userId.toUpperCase();
+                prefs(ctx).edit().putString(KEY_LOCKER_TOKEN, token).apply();
+            }
+        }
+        return token;
     }
 
     public static boolean isLoggedIn(Context ctx) {
