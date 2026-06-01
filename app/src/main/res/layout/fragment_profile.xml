@@ -12,6 +12,7 @@
         android:padding="16dp">
 
         <ImageView
+            android:id="@+id/btnHome"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/nav_item_selected_bg"
@@ -107,8 +108,9 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Change Private Key row -->
+    <!-- Change Password row -->
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardChangePassword"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
@@ -134,7 +136,7 @@
                 android:layout_centerVertical="true"
                 android:layout_marginStart="16dp"
                 android:layout_toEndOf="@id/ic_key"
-                android:text="Change Private Key"
+                android:text="Change Password"
                 android:textColor="@color/gray_text" />
 
             <ImageView

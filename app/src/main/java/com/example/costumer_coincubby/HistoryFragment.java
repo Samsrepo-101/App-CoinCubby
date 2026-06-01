@@ -53,6 +53,15 @@ public class HistoryFragment extends Fragment {
         adapter = new HistoryAdapter(items);
         rv.setAdapter(adapter);
 
+        android.view.View btnProfile = view.findViewById(R.id.btnProfile);
+        if (btnProfile != null) {
+            btnProfile.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).selectTab(3);
+                }
+            });
+        }
+
         loadHistory();
     }
 

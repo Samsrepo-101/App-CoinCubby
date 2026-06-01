@@ -73,6 +73,20 @@ public class ProfileFragment extends Fragment {
         tvPrivateKey = view.findViewById(R.id.tvPrivateKey);
         btnSignOut   = view.findViewById(R.id.btnSignOut);
 
+        android.widget.ImageView btnHome = view.findViewById(R.id.btnHome);
+        if (btnHome != null) {
+            btnHome.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).selectTab(0);
+                }
+            });
+        }
+
+        com.google.android.material.card.MaterialCardView cardChangePassword = view.findViewById(R.id.cardChangePassword);
+        if (cardChangePassword != null) {
+            cardChangePassword.setOnClickListener(v -> showChangePasswordDialog());
+        }
+
         // Show cached data immediately — no blank screen
         showCachedData();
 
@@ -90,8 +104,8 @@ public class ProfileFragment extends Fragment {
         String email    = SessionManager.getEmail(requireContext());
         String userId   = SessionManager.getUserId(requireContext());
 
-        tvFullName.setText((fullName != null && !fullName.isEmpty()) ? fullName : "Loading…");
-        tvContact.setText((email    != null && !email.isEmpty())    ? email    : "");
+        tvFullName.setText((fullName != null && !fullName.isEmpty() && !fullName.equalsIgnoreCase("null")) ? fullName : "Loading…");
+        tvContact.setText((email    != null && !email.isEmpty() && !email.equalsIgnoreCase("null"))    ? email    : "");
 
         String lockerToken = SessionManager.getLockerToken(requireContext());
         if (lockerToken != null && !lockerToken.isEmpty()) {
@@ -157,8 +171,8 @@ public class ProfileFragment extends Fragment {
                     requireActivity().runOnUiThread(() -> {
                         if (!isAdded()) return;
                         // Update name + contact in the avatar section
-                        if (!fFullName.isEmpty()) tvFullName.setText(fFullName);
-                        if (!fEmail.isEmpty())    tvContact.setText(fEmail);
+                        if (!fFullName.isEmpty() && !fFullName.equalsIgnoreCase("null")) tvFullName.setText(fFullName);
+                        if (!fEmail.isEmpty() && !fEmail.equalsIgnoreCase("null"))    tvContact.setText(fEmail);
                         // Update private key badge in the card
                         String lockerToken = SessionManager.getLockerToken(requireContext());
                         if (lockerToken != null && !lockerToken.isEmpty()) {
@@ -220,12 +234,17 @@ public class ProfileFragment extends Fragment {
                     }
 
                     JSONObject customer  = arr.getJSONObject(0);
-                    String fullName      = customer.optString("full_name",      "");
-                    String email         = customer.optString("email",          "");
-                    String contactNumber = customer.optString("contact_number", "");
+                    String fullName      = customer.isNull("full_name") ? "" : customer.optString("full_name", "");
+                    if (fullName.equalsIgnoreCase("null")) fullName = "";
+
+                    String email         = customer.isNull("email") ? "" : customer.optString("email", "");
+                    if (email.equalsIgnoreCase("null")) email = "";
+
+                    String contactNumber = customer.isNull("contact_number") ? "" : customer.optString("contact_number", "");
+                    if (contactNumber.equalsIgnoreCase("null")) contactNumber = "";
 
                     // Prefer contact number; fall back to email (shown below the name)
-                    String displayContact = !contactNumber.isEmpty() ? contactNumber : email;
+                    String displayContact = (!contactNumber.isEmpty()) ? contactNumber : email;
 
                     final String fName    = fullName;
                     final String fContact = displayContact;
@@ -235,9 +254,9 @@ public class ProfileFragment extends Fragment {
                     requireActivity().runOnUiThread(() -> {
                         if (!isAdded()) return;
                         // tvProfileFullName — name below avatar circle
-                        if (!fName.isEmpty())    tvFullName.setText(fName);
+                        if (!fName.isEmpty() && !fName.equalsIgnoreCase("null"))    tvFullName.setText(fName);
                         // tvProfileContact — contact/email below name
-                        if (!fContact.isEmpty()) tvContact.setText(fContact);
+                        if (!fContact.isEmpty() && !fContact.equalsIgnoreCase("null")) tvContact.setText(fContact);
                         // tvPrivateKey — badge inside the "Your Private Key" card
                         String lockerToken = SessionManager.getLockerToken(requireContext());
                         if (lockerToken != null && !lockerToken.isEmpty()) {
@@ -283,5 +302,117 @@ public class ProfileFragment extends Fragment {
         Intent intent = new Intent(requireContext(), LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
+    }
+
+    private void showChangePasswordDialog() {
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(requireContext());
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int paddingDp = (int) (16 * getResources().getDisplayMetrics().density);
+        layout.setPadding(paddingDp, paddingDp, paddingDp, paddingDp);
+
+        final android.widget.EditText etNewPassword = new android.widget.EditText(requireContext());
+        etNewPassword.setHint("New Password");
+        etNewPassword.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        layout.addView(etNewPassword);
+
+        final android.widget.EditText etConfirmPassword = new android.widget.EditText(requireContext());
+        etConfirmPassword.setHint("Confirm Password");
+        etConfirmPassword.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+
+        android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.topMargin = (int) (12 * getResources().getDisplayMetrics().density);
+        etConfirmPassword.setLayoutParams(params);
+        layout.addView(etConfirmPassword);
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Change Password")
+                .setView(layout)
+                .setPositiveButton("Update", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        dialog.show();
+
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String newPassword = etNewPassword.getText().toString();
+            String confirmPassword = etConfirmPassword.getText().toString();
+
+            if (newPassword.isEmpty()) {
+                etNewPassword.setError("Password cannot be empty");
+                etNewPassword.requestFocus();
+                return;
+            }
+            if (newPassword.length() < 6) {
+                etNewPassword.setError("Password must be at least 6 characters");
+                etNewPassword.requestFocus();
+                return;
+            }
+            if (!newPassword.equals(confirmPassword)) {
+                etConfirmPassword.setError("Passwords do not match");
+                etConfirmPassword.requestFocus();
+                return;
+            }
+
+            dialog.dismiss();
+            updatePassword(newPassword);
+        });
+    }
+
+    private void updatePassword(String newPassword) {
+        String accessToken = SessionManager.getAccessToken(requireContext());
+        if (accessToken == null || accessToken.isEmpty()) {
+            Toast.makeText(requireContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        JSONObject body = new JSONObject();
+        try {
+            body.put("password", newPassword);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        RequestBody requestBody = RequestBody.create(body.toString(), JSON_MEDIA);
+        Request request = new Request.Builder()
+                .url(SUPABASE_URL + "/auth/v1/user")
+                .addHeader("apikey",        SUPABASE_ANON)
+                .addHeader("Authorization", "Bearer " + accessToken)
+                .addHeader("Content-Type", "application/json")
+                .put(requestBody)
+                .build();
+
+        http.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull java.io.IOException e) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(requireContext(), "Network error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    });
+                }
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws java.io.IOException {
+                final String responseBody = response.body() != null ? response.body().string() : "";
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        if (response.isSuccessful()) {
+                            Toast.makeText(requireContext(), "Password updated successfully!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            try {
+                                JSONObject json = new JSONObject(responseBody);
+                                String msg = json.optString("message", "Could not update password.");
+                                Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show();
+                            } catch (JSONException e) {
+                                Toast.makeText(requireContext(), "Failed to update password.", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                }
+            }
+        });
     }
 }

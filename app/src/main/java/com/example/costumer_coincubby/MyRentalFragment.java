@@ -67,6 +67,15 @@ public class MyRentalFragment extends Fragment {
         adapter = new RentalAdapter(rentals, this::returnLocker);
         rv.setAdapter(adapter);
 
+        android.view.View btnProfile = view.findViewById(R.id.btnProfile);
+        if (btnProfile != null) {
+            btnProfile.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).selectTab(3);
+                }
+            });
+        }
+
         loadRentals();
     }
 
