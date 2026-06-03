@@ -70,10 +70,12 @@ public class LoginActivity extends AppCompatActivity {
         etPassword      = findViewById(R.id.etPassword);
         btnContinue     = findViewById(R.id.btnContinue);
         tvCreateAccount = findViewById(R.id.tvCreateAccount);
+        TextView tvForgotPassword = findViewById(R.id.tvForgotPassword);
 
         btnContinue.setOnClickListener(v -> attemptLogin());
         tvCreateAccount.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class)));
+        tvForgotPassword.setOnClickListener(v -> showForgotPasswordDialog());
     }
 
     private void attemptLogin() {
@@ -206,5 +208,97 @@ public class LoginActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         btnContinue.setEnabled(!loading);
         btnContinue.setText(loading ? "Logging in…" : "Continue");
+    }
+
+    private void showForgotPasswordDialog() {
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int paddingDp = (int) (16 * getResources().getDisplayMetrics().density);
+        layout.setPadding(paddingDp, paddingDp, paddingDp, paddingDp);
+
+        final android.widget.EditText etResetEmail = new android.widget.EditText(this);
+        etResetEmail.setHint("email@example.com");
+        etResetEmail.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+
+        String currentEmail = etEmail.getText().toString().trim();
+        if (!currentEmail.isEmpty()) {
+            etResetEmail.setText(currentEmail);
+        }
+
+        layout.addView(etResetEmail);
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Reset Password")
+                .setMessage("Enter your email address to receive a password reset link.")
+                .setView(layout)
+                .setPositiveButton("Send Reset Link", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        dialog.show();
+
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String email = etResetEmail.getText().toString().trim();
+            if (email.isEmpty()) {
+                etResetEmail.setError("Email is required");
+                etResetEmail.requestFocus();
+                return;
+            }
+            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                etResetEmail.setError("Enter a valid email address");
+                etResetEmail.requestFocus();
+                return;
+            }
+
+            dialog.dismiss();
+            sendResetPasswordEmail(email);
+        });
+    }
+
+    private void sendResetPasswordEmail(String email) {
+        JSONObject body = new JSONObject();
+        try {
+            body.put("email", email);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        Request request = new Request.Builder()
+                .url(SUPABASE_URL + "/auth/v1/recover")
+                .addHeader("apikey",       SUPABASE_ANON)
+                .addHeader("Content-Type", "application/json")
+                .post(RequestBody.create(body.toString(), JSON))
+                .build();
+
+        http.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(LoginActivity.this,
+                            "Network error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String responseBody = response.body() != null ? response.body().string() : "";
+                runOnUiThread(() -> {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(LoginActivity.this,
+                                "Password reset email sent! Please check your inbox.",
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        try {
+                            JSONObject json = new JSONObject(responseBody);
+                            String msg = json.optString("message", "Failed to send reset link.");
+                            Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_LONG).show();
+                        } catch (JSONException e) {
+                            Toast.makeText(LoginActivity.this,
+                                    "Failed to send reset link.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        });
     }
 }
